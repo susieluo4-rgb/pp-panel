@@ -1,75 +1,183 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <!-- PWA -->
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#ff9f43">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="萌宠家长">
-  <link rel="apple-touch-icon" href="icon-192.png">
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>萌宠乐园 · 家长面板</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#d97706" id="themeColorMeta">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="萌宠家长">
+<link rel="apple-touch-icon" href="icon-192.png">
+
 <style>
+  /* ===== 主题色板 ===== */
+  :root,
+  [data-theme="cream"] {
+    --bg:            #fdf6e3;
+    --card:          #fffdf5;
+    --header-bg:     #fffaee;
+    --border:        #f0e5cc;
+    --text:          #5c4a2a;
+    --text-secondary:#8b7355;
+    --text-muted:    #b8a37a;
+    --input-bg:      #fffaee;
+    --input-bg-soft: #f7eed8;
+
+    --accent:        #d97706;
+    --accent-soft:   #fef3c7;
+    --accent-text:   #92400e;
+    --success:       #65a30d;
+    --success-soft:  #ecfccb;
+    --success-text:  #3f6212;
+    --warning:       #f59e0b;
+    --warning-soft:  #fef3c7;
+    --warning-text:  #92400e;
+    --danger:        #dc2626;
+    --danger-soft:   #fee2e2;
+    --danger-text:   #991b1b;
+
+    --shadow:        0 1px 3px rgba(140,100,40,0.08);
+    --theme-color:   #d97706;
+  }
+  [data-theme="ios"] {
+    --bg:            #f2f2f7;
+    --card:          #ffffff;
+    --header-bg:     #ffffff;
+    --border:        #e5e5ea;
+    --text:          #1c1c1e;
+    --text-secondary:#8e8e93;
+    --text-muted:    #aeaeb2;
+    --input-bg:      #ffffff;
+    --input-bg-soft: #f2f2f7;
+
+    --accent:        #007aff;
+    --accent-soft:   #e5f0ff;
+    --accent-text:   #007aff;
+    --success:       #34c759;
+    --success-soft:  #e8f8e8;
+    --success-text:  #34c759;
+    --warning:       #ff9500;
+    --warning-soft:  #fff3e0;
+    --warning-text:  #ff9500;
+    --danger:        #ff3b30;
+    --danger-soft:   #ffe5e5;
+    --danger-text:   #ff3b30;
+
+    --shadow:        none;
+    --theme-color:   #007aff;
+  }
+  [data-theme="dark"] {
+    --bg:            #000000;
+    --card:          #1c1c1e;
+    --header-bg:     #1c1c1e;
+    --border:        #38383a;
+    --text:          #ffffff;
+    --text-secondary:#8e8e93;
+    --text-muted:    #636366;
+    --input-bg:      #2c2c2e;
+    --input-bg-soft: #2c2c2e;
+
+    --accent:        #0a84ff;
+    --accent-soft:   rgba(10,132,255,0.18);
+    --accent-text:   #0a84ff;
+    --success:       #30d158;
+    --success-soft:  rgba(48,209,88,0.18);
+    --success-text:  #30d158;
+    --warning:       #ff9f0a;
+    --warning-soft:  rgba(255,159,10,0.18);
+    --warning-text:  #ff9f0a;
+    --danger:        #ff453a;
+    --danger-soft:   rgba(255,69,58,0.18);
+    --danger-text:   #ff453a;
+
+    --shadow:        none;
+    --theme-color:   #1c1c1e;
+  }
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, sans-serif; background: #f2f2f7; color: #1c1c1e; min-height: 100vh; }
-  .header { background: #fff; padding: 20px 20px 16px; border-bottom: 1px solid #e5e5ea; position: sticky; top: 0; z-index: 10; }
+  body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; transition: background 0.25s, color 0.25s; }
+
+  .header { background: var(--header-bg); padding: 20px 20px 16px; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .header-text { flex: 1; min-width: 0; }
   .header h1 { font-size: 22px; font-weight: 700; }
-  .header p  { font-size: 13px; color: #8e8e93; margin-top: 4px; }
+  .header p  { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+  .settings-btn { flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--input-bg-soft); color: var(--text); font-size: 20px; cursor: pointer; display: grid; place-items: center; transition: background 0.2s; }
+  .settings-btn:hover, .settings-btn:active { background: var(--accent-soft); }
+
   .section   { margin: 16px; }
-  .section-title { font-size: 13px; font-weight: 600; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; padding-left: 4px; }
-  .card      { background: #fff; border-radius: 12px; overflow: hidden; }
-  .task-row  { display: flex; align-items: center; padding: 14px 16px; border-bottom: 1px solid #f2f2f7; gap: 12px; }
+  .section-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; padding-left: 4px; }
+  .card      { background: var(--card); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); }
+  .task-row  { display: flex; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--border); gap: 12px; }
   .task-row:last-child { border-bottom: none; }
   .task-icon { font-size: 28px; width: 40px; text-align: center; }
-  .task-info { flex: 1; }
+  .task-info { flex: 1; min-width: 0; }
   .task-name { font-size: 16px; font-weight: 600; }
-  .task-meta { font-size: 13px; color: #8e8e93; margin-top: 2px; }
+  .task-meta { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
   .status-badge { font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 20px; white-space: nowrap; }
-  .badge-active   { background: #e5f0ff; color: #007aff; }
-  .badge-pending  { background: #fff3e0; color: #ff9500; }
-  .badge-approved { background: #e8f8e8; color: #34c759; }
-  .badge-rejected { background: #ffe5e5; color: #ff3b30; }
+  .badge-active   { background: var(--accent-soft);  color: var(--accent-text); }
+  .badge-pending  { background: var(--warning-soft); color: var(--warning-text); }
+  .badge-approved { background: var(--success-soft); color: var(--success-text); }
+  .badge-rejected { background: var(--danger-soft);  color: var(--danger-text); }
+
   .btn { border: none; border-radius: 8px; padding: 8px 14px; font-size: 14px; font-weight: 600; cursor: pointer; }
-  .btn-approve { background: #34c759; color: #fff; }
-  .btn-reject  { background: #ff3b30; color: #fff; margin-right: 6px; }
-  .btn-delete  { background: #f2f2f7; color: #ff3b30; font-size: 18px; padding: 6px 10px; }
-  .add-form    { background: #fff; border-radius: 12px; padding: 16px; }
-  .add-form label { display: block; font-size: 13px; font-weight: 600; color: #8e8e93; margin-bottom: 4px; margin-top: 12px; }
+  .btn-approve { background: var(--success); color: #fff; }
+  .btn-reject  { background: var(--danger);  color: #fff; margin-right: 6px; }
+  .btn-delete  { background: var(--input-bg-soft); color: var(--danger); font-size: 18px; padding: 6px 10px; }
+
+  .add-form    { background: var(--card); border-radius: 12px; padding: 16px; box-shadow: var(--shadow); }
+  .add-form label { display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; margin-top: 12px; }
   .add-form label:first-child { margin-top: 0; }
-  .add-form input, .add-form select { width: 100%; padding: 10px 12px; border: 1px solid #e5e5ea; border-radius: 8px; font-size: 16px; }
+  .add-form input, .add-form select { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 16px; background: var(--input-bg); color: var(--text); }
   .icon-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; margin-top: 8px; }
-  .icon-btn  { font-size: 24px; padding: 6px; border: 2px solid transparent; border-radius: 8px; cursor: pointer; text-align: center; background: #f2f2f7; }
-  .icon-btn.selected { border-color: #007aff; background: #e5f0ff; }
-  .submit-btn { width: 100%; padding: 14px; background: #007aff; color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 16px; }
-  .submit-btn:disabled { background: #c7c7cc; cursor: default; }
-  .empty { text-align: center; padding: 40px 20px; color: #8e8e93; }
+  .icon-btn  { font-size: 24px; padding: 6px; border: 2px solid transparent; border-radius: 8px; cursor: pointer; text-align: center; background: var(--input-bg-soft); }
+  .icon-btn.selected { border-color: var(--accent); background: var(--accent-soft); }
+
+  .submit-btn { width: 100%; padding: 14px; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 16px; }
+  .submit-btn:disabled { background: var(--text-muted); cursor: default; }
+
+  .empty { text-align: center; padding: 40px 20px; color: var(--text-secondary); }
   .empty-icon { font-size: 48px; margin-bottom: 12px; }
-  .loading { text-align: center; padding: 40px; color: #8e8e93; font-size: 14px; }
+  .loading { text-align: center; padding: 40px; color: var(--text-secondary); font-size: 14px; }
+
   .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 14px; z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
   .toast.show { opacity: 1; }
-  /* 配置提示 */
-  .config-banner { background: #fff3cd; border: 1px solid #ffc107; border-radius: 10px; padding: 14px; margin: 16px; font-size: 14px; line-height: 1.6; }
-  .config-banner strong { color: #856404; }
-  .config-banner code { background: #ffeaa7; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 13px; }
+
+  /* ===== 设置面板 (Bottom Sheet) ===== */
+  .sheet-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); opacity: 0; pointer-events: none; transition: opacity 0.25s; z-index: 100; }
+  .sheet-backdrop.show { opacity: 1; pointer-events: auto; }
+  .sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); border-radius: 20px 20px 0 0; padding: 20px 20px calc(20px + env(safe-area-inset-bottom)); transform: translateY(100%); transition: transform 0.3s cubic-bezier(.4,0,.2,1); z-index: 101; max-height: 80vh; overflow-y: auto; }
+  .sheet.show { transform: translateY(0); }
+  .sheet-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 16px; }
+  .sheet-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+  .sheet-section { margin-bottom: 24px; }
+  .sheet-section:last-child { margin-bottom: 0; }
+  .sheet-label { font-size: 13px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+  .theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .theme-card { padding: 14px 8px; border-radius: 12px; border: 2px solid var(--border); cursor: pointer; text-align: center; transition: border-color 0.15s, transform 0.1s; user-select: none; }
+  .theme-card:active { transform: scale(0.97); }
+  .theme-card.selected { border-color: var(--accent); }
+  .theme-preview { width: 100%; height: 50px; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+  .theme-name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .theme-sub  { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+  .preview-cream { background: linear-gradient(135deg, #fdf6e3 0%, #fffdf5 100%); color: #d97706; border: 1px solid #f0e5cc; }
+  .preview-ios   { background: linear-gradient(135deg, #f2f2f7 0%, #ffffff 100%); color: #007aff; border: 1px solid #e5e5ea; }
+  .preview-dark  { background: linear-gradient(135deg, #1c1c1e 0%, #2c2c2e 100%); color: #0a84ff; border: 1px solid #38383a; }
+  .meta-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-secondary); padding: 6px 0; }
+  .meta-row .v { color: var(--text); font-weight: 500; }
 </style>
 </head>
 <body>
 
-<!-- ⚠️ 配置提示（配置完成后可删掉这段） -->
-<div class="config-banner" id="configBanner">
-  <strong>📋 首次使用：请填入你的 Firebase 配置</strong><br>
-  1. 打开 <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a><br>
-  2. 选你的项目 → 点齿轮 ⚙️ → 「项目设置」→ 「网络应用」→ 点 &lt;/&gt; 图标添加网络应用<br>
-  3. 复制 <code>firebaseConfig</code> 里的值，填到下方 JS 里<br>
-  4. 保存文件，用浏览器打开即可
-</div>
-
 <div class="header">
-  <h1>🐾 萌宠乐园 · 家长面板</h1>
-  <p id="statusText">连接中…</p>
+  <div class="header-text">
+    <h1>🐾 萌宠乐园 · 家长面板</h1>
+    <p id="statusText">连接中…</p>
+  </div>
+  <button class="settings-btn" onclick="openSettings()" aria-label="设置">⚙️</button>
 </div>
 
 <!-- 新增任务 -->
@@ -119,13 +227,46 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- ✅ 把下面 firebaseConfig 替换成你自己的配置 -->
+<!-- ===== 设置面板 ===== -->
+<div class="sheet-backdrop" id="sheetBackdrop" onclick="closeSettings()"></div>
+<div class="sheet" id="settingsSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">⚙️ 设置</div>
+
+  <div class="sheet-section">
+    <div class="sheet-label">主题</div>
+    <div class="theme-grid">
+      <div class="theme-card" data-set-theme="cream">
+        <div class="theme-preview preview-cream">🐾</div>
+        <div class="theme-name">米黄</div>
+        <div class="theme-sub">Cozy</div>
+      </div>
+      <div class="theme-card" data-set-theme="ios">
+        <div class="theme-preview preview-ios">🐾</div>
+        <div class="theme-name">iOS</div>
+        <div class="theme-sub">Default</div>
+      </div>
+      <div class="theme-card" data-set-theme="dark">
+        <div class="theme-preview preview-dark">🐾</div>
+        <div class="theme-name">夜间</div>
+        <div class="theme-sub">Dark</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sheet-section">
+    <div class="sheet-label">关于</div>
+    <div class="meta-row"><span>项目</span><span class="v">todolist-1cee1</span></div>
+    <div class="meta-row"><span>版本</span><span class="v">v0.2 · 主题系统</span></div>
+    <div class="meta-row"><span>项目地址</span><span class="v"><a href="https://github.com/susieluo4-rgb/pp-panel" target="_blank" style="color:var(--accent);text-decoration:none">github.com/.../pp-panel</a></span></div>
+  </div>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, orderBy, query }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// ⬇️ 把这里替换成你的 Firebase 配置 ⬇️
 const firebaseConfig = {
   apiKey:            "AIzaSyDy4yJAz6qegHHO9mLERtPr3CN2eVuNQoE",
   authDomain:        "todolist-1cee1.firebaseapp.com",
@@ -135,23 +276,50 @@ const firebaseConfig = {
   appId:             "1:940068669351:web:e314368fe7a416518a9882",
   measurementId:     "G-NS4DBV09GL"
 };
-// ⬆️ 替换到这里为止 ⬆️
 
-// 检测是否已配置
-const isConfigured = firebaseConfig.apiKey !== "YOUR_API_KEY";
-document.getElementById("statusText").textContent = isConfigured ? "已连接 Firebase" : "⚠️ 请先填入 Firebase 配置";
-if (isConfigured) document.getElementById("configBanner").style.display = "none";
+document.getElementById("statusText").textContent = "已连接 Firebase";
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
 
-const app = isConfigured ? initializeApp(firebaseConfig) : null;
-const db  = isConfigured ? getFirestore(app) : null;
+// ===== 主题系统 =====
+const THEME_KEY = "pp_panel_theme";
+const VALID_THEMES = ["cream", "ios", "dark"];
 
-// 图标选择
+function applyTheme(name) {
+  const t = VALID_THEMES.includes(name) ? name : "cream";
+  document.documentElement.setAttribute("data-theme", t);
+  localStorage.setItem(THEME_KEY, t);
+  // 标记选中态
+  document.querySelectorAll("[data-set-theme]").forEach(el => {
+    el.classList.toggle("selected", el.dataset.setTheme === t);
+  });
+  // 同步浏览器顶栏 theme-color
+  const meta = document.getElementById("themeColorMeta");
+  const colorMap = { cream: "#d97706", ios: "#007aff", dark: "#1c1c1e" };
+  if (meta) meta.setAttribute("content", colorMap[t]);
+}
+
+// 初次加载：localStorage > 默认 cream
+applyTheme(localStorage.getItem(THEME_KEY) || "cream");
+
+// 点击主题卡片
+document.querySelectorAll("[data-set-theme]").forEach(el => {
+  el.addEventListener("click", () => applyTheme(el.dataset.setTheme));
+});
+
+// ===== 设置面板开关 =====
+const backdrop = document.getElementById("sheetBackdrop");
+const sheet    = document.getElementById("settingsSheet");
+window.openSettings  = () => { backdrop.classList.add("show"); sheet.classList.add("show"); };
+window.closeSettings = () => { backdrop.classList.remove("show"); sheet.classList.remove("show"); };
+
+// ===== 图标选择 =====
 const icons = ["📚","✏️","📐","📖","🏃","🧹","🍽️","🌙","🎒","🎨","🎵","🌿","⚽️","🎯","🧩","🎮"];
-let selectedIcon = "⭐️";
+let selectedIcon = icons[0];
 const iconGrid = document.getElementById("iconGrid");
-icons.forEach(em => {
+icons.forEach((em, i) => {
   const btn = document.createElement("div");
-  btn.className = "icon-btn";
+  btn.className = "icon-btn" + (i === 0 ? " selected" : "");
   btn.textContent = em;
   btn.onclick = () => {
     document.querySelectorAll(".icon-btn").forEach(b => b.classList.remove("selected"));
@@ -160,21 +328,16 @@ icons.forEach(em => {
   };
   iconGrid.appendChild(btn);
 });
-// 默认选中第一个
-iconGrid.firstChild.classList.add("selected");
-selectedIcon = icons[0];
 
-// 实时监听任务
-if (db) {
-  const q = query(collection(db, "tasks"), orderBy("sortOrder"));
-  onSnapshot(q, snapshot => {
-    const tasks = [];
-    snapshot.forEach(d => tasks.push({ id: d.id, ...d.data() }));
-    renderTasks(tasks);
-  }, err => {
-    document.getElementById("statusText").textContent = "⚠️ 连接失败：" + err.message;
-  });
-}
+// ===== 实时监听任务 =====
+const q = query(collection(db, "tasks"), orderBy("sortOrder"));
+onSnapshot(q, snapshot => {
+  const tasks = [];
+  snapshot.forEach(d => tasks.push({ id: d.id, ...d.data() }));
+  renderTasks(tasks);
+}, err => {
+  document.getElementById("statusText").textContent = "⚠️ 连接失败：" + err.message;
+});
 
 function renderTasks(tasks) {
   const pending = tasks.filter(t => t.statusRaw === "pending");
@@ -182,7 +345,6 @@ function renderTasks(tasks) {
   const pendingList    = document.getElementById("pendingList");
   const taskList       = document.getElementById("taskList");
 
-  // 待审批区
   if (pending.length > 0) {
     pendingSection.style.display = "block";
     document.getElementById("pendingCount").textContent = `（${pending.length}）`;
@@ -200,7 +362,6 @@ function renderTasks(tasks) {
     pendingSection.style.display = "none";
   }
 
-  // 全部任务
   if (tasks.length === 0) {
     taskList.innerHTML = `<div class="empty"><div class="empty-icon">📋</div>还没有任务，在上方添加吧</div>`;
     return;
@@ -208,8 +369,8 @@ function renderTasks(tasks) {
   taskList.innerHTML = tasks.map(t => {
     const statusMap = { active:"active", pending:"pending", approved:"approved", rejected:"rejected" };
     const labelMap  = { active:"进行中", pending:"待审批", approved:"✓已通过", rejected:"已拒绝" };
-    const cls  = statusMap[t.statusRaw] || "active";
-    const label = labelMap[t.statusRaw] || "进行中";
+    const cls   = statusMap[t.statusRaw] || "active";
+    const label = labelMap[t.statusRaw]  || "进行中";
     return `
       <div class="task-row">
         <div class="task-icon">${t.icon || "⭐️"}</div>
@@ -223,10 +384,9 @@ function renderTasks(tasks) {
   }).join("");
 }
 
-// 新增任务
 window.addTask = async function() {
   const title = document.getElementById("newTitle").value.trim();
-  if (!title || !db) return;
+  if (!title) return;
   const btn = document.getElementById("addBtn");
   btn.disabled = true;
   try {
@@ -249,30 +409,23 @@ window.addTask = async function() {
   btn.disabled = false;
 };
 
-// 审批通过
 window.approveTask = async function(id) {
-  if (!db) return;
   await updateDoc(doc(db, "tasks", id), { statusRaw: "approved" });
   showToast("✅ 已通过审批");
 };
 
-// 拒绝
 window.rejectTask = async function(id) {
   const reason = prompt("拒绝理由（可选）：") || "";
-  if (!db) return;
   await updateDoc(doc(db, "tasks", id), { statusRaw: "rejected", rejectionReason: reason });
   showToast("已拒绝");
 };
 
-// 删除
 window.deleteTask = async function(id) {
   if (!confirm("确认删除这个任务？")) return;
-  if (!db) return;
   await deleteDoc(doc(db, "tasks", id));
   showToast("🗑 已删除");
 };
 
-// Toast
 function showToast(msg) {
   const t = document.getElementById("toast");
   t.textContent = msg;
