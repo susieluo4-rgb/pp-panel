@@ -131,10 +131,13 @@
   .add-form    { background: var(--card); border-radius: 12px; padding: 16px; box-shadow: var(--shadow); }
   .add-form label { display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; margin-top: 12px; }
   .add-form label:first-child { margin-top: 0; }
-  .add-form input, .add-form select { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 16px; background: var(--input-bg); color: var(--text); }
-  .icon-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; margin-top: 8px; }
-  .icon-btn  { font-size: 24px; padding: 6px; border: 2px solid transparent; border-radius: 8px; cursor: pointer; text-align: center; background: var(--input-bg-soft); }
-  .icon-btn.selected { border-color: var(--accent); background: var(--accent-soft); }
+  .add-form input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 16px; background: var(--input-bg); color: var(--text); }
+  /* ===== 按钮选择组（科目 / 金币 / 频率） ===== */
+  .btn-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+  .btn-chip { padding: 8px 16px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--input-bg-soft); color: var(--text-secondary); font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.15s; user-select: none; -webkit-user-select: none; }
+  .btn-chip:active { transform: scale(0.95); }
+  .btn-chip.selected { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-text); }
+  .btn-chip-coin { min-width: 44px; text-align: center; }
 
   .submit-btn { width: 100%; padding: 14px; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 16px; }
   .submit-btn:disabled { background: var(--text-muted); cursor: default; }
@@ -185,27 +188,31 @@
   <div class="section-title">新增任务</div>
   <div class="add-form">
     <label>任务名称</label>
-    <input type="text" id="newTitle" placeholder="例：数学作业、整理书包" />
+    <input type="text" id="newTitle" placeholder="例：英语默写、数学口算" onkeydown="if(event.key==='Enter'){event.preventDefault();addTask()}" />
 
-    <label>图标</label>
-    <div class="icon-grid" id="iconGrid"></div>
+    <label>科目</label>
+    <div class="btn-group" id="typeGroup">
+      <div class="btn-chip selected" data-val="english">英语</div>
+      <div class="btn-chip" data-val="math">数学</div>
+      <div class="btn-chip" data-val="chinese">语文</div>
+      <div class="btn-chip" data-val="other">其他</div>
+    </div>
 
-    <label>类型</label>
-    <select id="newType">
-      <option value="study">📚 学习</option>
-      <option value="chore">🧹 家务</option>
-      <option value="exercise">🏃 运动</option>
-      <option value="other">⭐️ 其他</option>
-    </select>
+    <label>频率</label>
+    <div class="btn-group" id="freqGroup">
+      <div class="btn-chip selected" data-val="daily">每天</div>
+      <div class="btn-chip" data-val="once">临时</div>
+    </div>
 
     <label>金币奖励</label>
-    <select id="newReward">
-      <option value="1">1 🪙</option>
-      <option value="2">2 🪙</option>
-      <option value="3" selected>3 🪙</option>
-      <option value="5">5 🪙</option>
-      <option value="10">10 🪙</option>
-    </select>
+    <div class="btn-group" id="coinGroup">
+      <div class="btn-chip btn-chip-coin" data-val="1">1</div>
+      <div class="btn-chip btn-chip-coin" data-val="2">2</div>
+      <div class="btn-chip btn-chip-coin selected" data-val="3">3</div>
+      <div class="btn-chip btn-chip-coin" data-val="5">5</div>
+      <div class="btn-chip btn-chip-coin" data-val="8">8</div>
+      <div class="btn-chip btn-chip-coin" data-val="10">10</div>
+    </div>
 
     <button class="submit-btn" id="addBtn" onclick="addTask()">＋ 添加任务</button>
   </div>
@@ -313,21 +320,26 @@ const sheet    = document.getElementById("settingsSheet");
 window.openSettings  = () => { backdrop.classList.add("show"); sheet.classList.add("show"); };
 window.closeSettings = () => { backdrop.classList.remove("show"); sheet.classList.remove("show"); };
 
-// ===== 图标选择 =====
-const icons = ["📚","✏️","📐","📖","🏃","🧹","🍽️","🌙","🎒","🎨","🎵","🌿","⚽️","🎯","🧩","🎮"];
-let selectedIcon = icons[0];
-const iconGrid = document.getElementById("iconGrid");
-icons.forEach((em, i) => {
-  const btn = document.createElement("div");
-  btn.className = "icon-btn" + (i === 0 ? " selected" : "");
-  btn.textContent = em;
-  btn.onclick = () => {
-    document.querySelectorAll(".icon-btn").forEach(b => b.classList.remove("selected"));
-    btn.classList.add("selected");
-    selectedIcon = em;
-  };
-  iconGrid.appendChild(btn);
-});
+// ===== 科目 → 图标映射 =====
+const typeIconMap = { english: "📖", math: "📐", chinese: "✏️", other: "⭐️" };
+
+// ===== 按钮组通用逻辑 =====
+function setupBtnGroup(groupId) {
+  const group = document.getElementById(groupId);
+  group.querySelectorAll(".btn-chip").forEach(chip => {
+    chip.onclick = () => {
+      group.querySelectorAll(".btn-chip").forEach(c => c.classList.remove("selected"));
+      chip.classList.add("selected");
+    };
+  });
+}
+function getGroupVal(groupId) {
+  const sel = document.getElementById(groupId).querySelector(".btn-chip.selected");
+  return sel ? sel.dataset.val : "";
+}
+setupBtnGroup("typeGroup");
+setupBtnGroup("freqGroup");
+setupBtnGroup("coinGroup");
 
 // ===== 实时监听任务 =====
 const q = query(collection(db, "tasks"), orderBy("sortOrder"));
@@ -376,7 +388,7 @@ function renderTasks(tasks) {
         <div class="task-icon">${t.icon || "⭐️"}</div>
         <div class="task-info">
           <div class="task-name">${t.title}</div>
-          <div class="task-meta">🪙 ${t.rewardAmount} · ${t.frequencyRaw === "daily" ? "每天" : "每周"}</div>
+          <div class="task-meta">🪙 ${t.rewardAmount} · ${t.frequencyRaw === "daily" ? "每天" : t.frequencyRaw === "once" ? "临时" : "每周"}</div>
         </div>
         <span class="status-badge badge-${cls}">${label}</span>
         <button class="btn btn-delete" onclick="deleteTask('${t.id}')" title="删除">🗑</button>
@@ -387,16 +399,20 @@ function renderTasks(tasks) {
 window.addTask = async function() {
   const title = document.getElementById("newTitle").value.trim();
   if (!title) return;
+  const typeVal = getGroupVal("typeGroup");
+  const freqVal = getGroupVal("freqGroup");
+  const coinVal = parseInt(getGroupVal("coinGroup")) || 3;
+  const icon = typeIconMap[typeVal] || "⭐️";
   const btn = document.getElementById("addBtn");
   btn.disabled = true;
   try {
     await addDoc(collection(db, "tasks"), {
       title,
-      icon:            selectedIcon,
+      icon,
       taskDescription: "",
-      typeRaw:         document.getElementById("newType").value,
-      frequencyRaw:    "daily",
-      rewardAmount:    parseInt(document.getElementById("newReward").value),
+      typeRaw:         typeVal,
+      frequencyRaw:    freqVal === "once" ? "once" : "daily",
+      rewardAmount:    coinVal,
       statusRaw:       "active",
       completedDate:   "",
       rejectionReason: "",
@@ -404,6 +420,7 @@ window.addTask = async function() {
       createdAt:       Date.now() / 1000,
     });
     document.getElementById("newTitle").value = "";
+    document.getElementById("newTitle").focus();
     showToast("✅ 任务已添加，Susie 的 iPad 马上看到");
   } catch(e) { showToast("❌ 添加失败: " + e.message); }
   btn.disabled = false;
