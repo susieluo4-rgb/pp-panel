@@ -202,6 +202,7 @@
   .dur-stepper button{width:36px; height:36px; border:none; border-radius:9px; background:var(--card); color:var(--accent); font-size:22px; font-weight:800; cursor:pointer; line-height:1;}
   .dur-stepper #durValue{font-size:19px; font-weight:800; min-width:38px; text-align:center;}
   .dur-unit{color:var(--text-secondary); font-size:14px;}
+  .btn-edit{background:var(--accent-soft); color:var(--accent-text); font-size:16px; padding:6px 10px;}
 </style>
 </head>
 <body>
@@ -296,6 +297,45 @@
 
 </div><!-- /col -->
 </main>
+
+<!-- 编辑常用任务 -->
+<div class="sheet-backdrop" id="tplEditBackdrop" onclick="closeTplEdit()"></div>
+<div class="sheet" id="tplEditSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">✏️ 编辑常用任务</div>
+  <div class="add-form">
+    <label>任务名称</label>
+    <input type="text" id="editTitle" />
+    <label>科目</label>
+    <div class="btn-group" id="editTypeGroup">
+      <div class="btn-chip" data-val="english">英语</div>
+      <div class="btn-chip" data-val="math">数学</div>
+      <div class="btn-chip" data-val="chinese">语文</div>
+      <div class="btn-chip" data-val="other">其他</div>
+    </div>
+    <label>频率</label>
+    <div class="btn-group" id="editFreqGroup">
+      <div class="btn-chip" data-val="daily">每天</div>
+      <div class="btn-chip" data-val="once">临时</div>
+    </div>
+    <label>金币奖励</label>
+    <div class="btn-group" id="editCoinGroup">
+      <div class="btn-chip btn-chip-coin" data-val="1">1</div>
+      <div class="btn-chip btn-chip-coin" data-val="2">2</div>
+      <div class="btn-chip btn-chip-coin" data-val="3">3</div>
+      <div class="btn-chip btn-chip-coin" data-val="5">5</div>
+      <div class="btn-chip btn-chip-coin" data-val="8">8</div>
+      <div class="btn-chip btn-chip-coin" data-val="10">10</div>
+    </div>
+    <label>预计时长</label>
+    <div class="dur-stepper">
+      <button type="button" onclick="adjustEditDur(-5)">−</button>
+      <span id="editDurValue">20</span><span class="dur-unit">分钟</span>
+      <button type="button" onclick="adjustEditDur(5)">＋</button>
+    </div>
+    <button class="submit-btn" onclick="saveTplEdit()">保存修改</button>
+  </div>
+</div>
 
 <!-- ===== 设置面板 ===== -->
 <div class="sheet-backdrop" id="sheetBackdrop" onclick="closeSettings()"></div>
@@ -570,6 +610,7 @@ function renderTemplates() {
         <div class="task-name">${t.title}</div>
         <div class="task-meta">\ud83e\ude99 ${t.rewardAmount} \u00b7 \u23f1 ${t.estMinutes || 20}\u5206 \u00b7 ${t.frequencyRaw === "once" ? "\u4e34\u65f6" : "\u6bcf\u5929"}</div>
       </div>
+      <button class="btn btn-edit" onclick="openTplEdit('${t.id}')" title="修改">✏️</button>
       <button class="btn btn-delete" onclick="deleteTemplate('${t.id}')" title="\u4ece\u5e38\u7528\u5e93\u5220\u9664">\ud83d\uddd1</button>
     </div>`).join("");
   if (selAll) selAll.checked = false;
@@ -607,6 +648,58 @@ window.importSelected = async function() {
     showToast("\u2b07\ufe0f \u5df2\u5bfc\u5165 " + n + " \u4e2a\u4efb\u52a1\u5230\u4eca\u5929");
   } catch(e){ showToast("\u274c \u5bfc\u5165\u5931\u8d25: " + e.message); }
   btn.disabled = false;
+};
+
+// ===== 常用库编辑 =====
+setupBtnGroup("editTypeGroup");
+setupBtnGroup("editFreqGroup");
+setupBtnGroup("editCoinGroup");
+let editingTplId = null;
+let editDur = 20;
+
+function setGroupVal(groupId, val) {
+  document.getElementById(groupId).querySelectorAll(".btn-chip").forEach(c => {
+    c.classList.toggle("selected", c.dataset.val === String(val));
+  });
+}
+window.adjustEditDur = function(d) {
+  editDur = Math.min(180, Math.max(5, editDur + d));
+  document.getElementById("editDurValue").textContent = editDur;
+};
+window.openTplEdit = function(id) {
+  const t = templates.find(x => x.id === id); if (!t) return;
+  editingTplId = id;
+  document.getElementById("editTitle").value = t.title || "";
+  setGroupVal("editTypeGroup", t.typeRaw || "other");
+  setGroupVal("editFreqGroup", t.frequencyRaw === "once" ? "once" : "daily");
+  setGroupVal("editCoinGroup", t.rewardAmount || 3);
+  editDur = t.estMinutes || 20;
+  document.getElementById("editDurValue").textContent = editDur;
+  document.getElementById("tplEditBackdrop").classList.add("show");
+  document.getElementById("tplEditSheet").classList.add("show");
+};
+window.closeTplEdit = function() {
+  document.getElementById("tplEditBackdrop").classList.remove("show");
+  document.getElementById("tplEditSheet").classList.remove("show");
+  editingTplId = null;
+};
+window.saveTplEdit = async function() {
+  if (!editingTplId) return;
+  const title = document.getElementById("editTitle").value.trim();
+  if (!title) { showToast("任务名称不能为空"); return; }
+  const typeVal = getGroupVal("editTypeGroup") || "other";
+  const freqVal = getGroupVal("editFreqGroup");
+  const coinVal = parseInt(getGroupVal("editCoinGroup")) || 3;
+  const icon = typeIconMap[typeVal] || "\u2b50\ufe0f";
+  try {
+    await updateDoc(doc(db, "templates", editingTplId), {
+      title, icon, typeRaw: typeVal,
+      frequencyRaw: freqVal === "once" ? "once" : "daily",
+      rewardAmount: coinVal, estMinutes: editDur,
+    });
+    closeTplEdit();
+    showToast("\u2705 \u5df2\u4fdd\u5b58\u4fee\u6539");
+  } catch(e) { showToast("\u274c \u4fdd\u5b58\u5931\u8d25: " + e.message); }
 };
 
 function showToast(msg) {
