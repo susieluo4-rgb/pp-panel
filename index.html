@@ -197,6 +197,11 @@
   .tpl-row{padding:9px 12px;}
   .section-title.with-action{display:flex; align-items:center; justify-content:space-between; padding-right:4px;}
   .btn-clear-all{background:var(--danger-soft); color:var(--danger); font-size:12px; font-weight:700; padding:5px 10px; border:none; border-radius:8px; cursor:pointer; text-transform:none; letter-spacing:0;}
+
+  .dur-stepper{display:flex; align-items:center; gap:14px; background:var(--input-bg-soft); border:1.5px solid var(--border); border-radius:12px; padding:8px 16px; width:fit-content;}
+  .dur-stepper button{width:36px; height:36px; border:none; border-radius:9px; background:var(--card); color:var(--accent); font-size:22px; font-weight:800; cursor:pointer; line-height:1;}
+  .dur-stepper #durValue{font-size:19px; font-weight:800; min-width:38px; text-align:center;}
+  .dur-unit{color:var(--text-secondary); font-size:14px;}
 </style>
 </head>
 <body>
@@ -244,13 +249,10 @@
     </div>
 
     <label>预计时长</label>
-    <div class="btn-group" id="durGroup">
-      <div class="btn-chip" data-val="10">10分</div>
-      <div class="btn-chip" data-val="15">15分</div>
-      <div class="btn-chip selected" data-val="20">20分</div>
-      <div class="btn-chip" data-val="30">30分</div>
-      <div class="btn-chip" data-val="45">45分</div>
-      <div class="btn-chip" data-val="60">60分</div>
+    <div class="dur-stepper">
+      <button type="button" onclick="adjustDur(-5)">−</button>
+      <span id="durValue">20</span><span class="dur-unit">分钟</span>
+      <button type="button" onclick="adjustDur(5)">＋</button>
     </div>
 
     <div class="add-actions">
@@ -401,7 +403,12 @@ function getGroupVal(groupId) {
 setupBtnGroup("typeGroup");
 setupBtnGroup("freqGroup");
 setupBtnGroup("coinGroup");
-setupBtnGroup("durGroup");
+
+let curDur = 20;
+window.adjustDur = function(d){
+  curDur = Math.min(180, Math.max(5, curDur + d));
+  document.getElementById("durValue").textContent = curDur;
+};
 
 // ===== 实时监听任务 =====
 let latestTasks = [];
@@ -466,7 +473,7 @@ window.addTask = async function() {
   const typeVal = getGroupVal("typeGroup");
   const freqVal = getGroupVal("freqGroup");
   const coinVal = parseInt(getGroupVal("coinGroup")) || 3;
-  const durVal = parseInt(getGroupVal("durGroup")) || 20;
+  const durVal = curDur;
   const icon = typeIconMap[typeVal] || "⭐️";
   const btn = document.getElementById("addBtn");
   btn.disabled = true;
@@ -526,12 +533,13 @@ window.saveTemplate = async function() {
   if (!title) { showToast("先填任务名称"); return; }
   const typeVal = getGroupVal("typeGroup");
   const coinVal = parseInt(getGroupVal("coinGroup")) || 3;
-  const durVal = parseInt(getGroupVal("durGroup")) || 20;
+  const durVal = curDur;
+  const freqVal = getGroupVal("freqGroup");
   const icon = typeIconMap[typeVal] || "\u2b50\ufe0f";
   const btn = document.getElementById("tplBtn"); btn.disabled = true;
   try {
     await addDoc(collection(db, "templates"), {
-      title, icon, typeRaw: typeVal, rewardAmount: coinVal, estMinutes: durVal,
+      title, icon, typeRaw: typeVal, rewardAmount: coinVal, estMinutes: durVal, frequencyRaw: freqVal === "once" ? "once" : "daily",
       sortOrder: Date.now(), createdAt: Date.now()/1000,
     });
     document.getElementById("newTitle").value = "";
@@ -560,7 +568,7 @@ function renderTemplates() {
       <div class="task-icon">${t.icon || "\u2b50\ufe0f"}</div>
       <div class="task-info">
         <div class="task-name">${t.title}</div>
-        <div class="task-meta">\ud83e\ude99 ${t.rewardAmount} \u00b7 \u23f1 ${t.estMinutes || 20}\u5206</div>
+        <div class="task-meta">\ud83e\ude99 ${t.rewardAmount} \u00b7 \u23f1 ${t.estMinutes || 20}\u5206 \u00b7 ${t.frequencyRaw === "once" ? "\u4e34\u65f6" : "\u6bcf\u5929"}</div>
       </div>
       <button class="btn btn-delete" onclick="deleteTemplate('${t.id}')" title="\u4ece\u5e38\u7528\u5e93\u5220\u9664">\ud83d\uddd1</button>
     </div>`).join("");
@@ -587,7 +595,7 @@ window.importSelected = async function() {
       const t = templates.find(x => x.id === id); if (!t) continue;
       await addDoc(collection(db, "tasks"), {
         title: t.title, icon: t.icon || "\u2b50\ufe0f", taskDescription: "",
-        typeRaw: t.typeRaw || "other", frequencyRaw: "once",
+        typeRaw: t.typeRaw || "other", frequencyRaw: t.frequencyRaw || "once",
         rewardAmount: t.rewardAmount || 3, estMinutes: t.estMinutes || 20, statusRaw: "active",
         completedDate: "", rejectionReason: "",
         sortOrder: Date.now() + n, createdAt: Date.now()/1000,
