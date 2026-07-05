@@ -183,6 +183,20 @@
   .tpl-bar .submit-btn{flex:1; margin:0;}
   .tpl-selall{display:flex; align-items:center; gap:6px; font-size:14px; color:var(--text-secondary); white-space:nowrap; cursor:pointer;}
   .tpl-selall input{width:18px; height:18px; accent-color:var(--accent);}
+
+  /* ===== 分栏 & 紧凑 ===== */
+  .cols{max-width:1120px; margin:0 auto; display:flex; align-items:flex-start;}
+  .col{flex:1 1 0; min-width:0;}
+  @media(max-width:819px){ .cols{display:block; max-width:640px;} }
+  .section{margin:12px;}
+  .section-title{margin-bottom:6px;}
+  .add-form{padding:14px;}
+  .add-form label{margin-top:9px;}
+  .submit-btn{padding:12px; margin-top:12px;}
+  .task-row{padding:11px 14px;}
+  .tpl-row{padding:9px 12px;}
+  .section-title.with-action{display:flex; align-items:center; justify-content:space-between; padding-right:4px;}
+  .btn-clear-all{background:var(--danger-soft); color:var(--danger); font-size:12px; font-weight:700; padding:5px 10px; border:none; border-radius:8px; cursor:pointer; text-transform:none; letter-spacing:0;}
 </style>
 </head>
 <body>
@@ -194,6 +208,9 @@
   </div>
   <button class="settings-btn" onclick="openSettings()" aria-label="设置">⚙️</button>
 </div>
+
+<main class="cols">
+<div class="col">
 
 <!-- 新增任务 -->
 <div class="section">
@@ -243,6 +260,9 @@
   </div>
 </div>
 
+</div><!-- /col -->
+<div class="col">
+
 <!-- 待审批 -->
 <div class="section" id="pendingSection" style="display:none">
   <div class="section-title">待审批 <span id="pendingCount"></span></div>
@@ -251,13 +271,19 @@
 
 <!-- 所有任务 -->
 <div class="section">
-  <div class="section-title">所有任务</div>
+  <div class="section-title with-action">
+    <span>所有任务</span>
+    <button class="btn-clear-all" onclick="clearAllTasks()">🧹 清空全部</button>
+  </div>
   <div class="card" id="taskList">
     <div class="loading">加载中…</div>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
+
+</div><!-- /col -->
+</main>
 
 <!-- ===== 设置面板 ===== -->
 <div class="sheet-backdrop" id="sheetBackdrop" onclick="closeSettings()"></div>
@@ -367,10 +393,12 @@ setupBtnGroup("freqGroup");
 setupBtnGroup("coinGroup");
 
 // ===== 实时监听任务 =====
+let latestTasks = [];
 const q = query(collection(db, "tasks"), orderBy("sortOrder"));
 onSnapshot(q, snapshot => {
   const tasks = [];
   snapshot.forEach(d => tasks.push({ id: d.id, ...d.data() }));
+  latestTasks = tasks;
   renderTasks(tasks);
 }, err => {
   document.getElementById("statusText").textContent = "⚠️ 连接失败：" + err.message;
@@ -460,6 +488,15 @@ window.rejectTask = async function(id) {
   const reason = prompt("拒绝理由（可选）：") || "";
   await updateDoc(doc(db, "tasks", id), { statusRaw: "rejected", rejectionReason: reason });
   showToast("已拒绝");
+};
+
+window.clearAllTasks = async function() {
+  if (latestTasks.length === 0) { showToast("\u6ca1\u6709\u4efb\u52a1\u53ef\u6e05\u7a7a"); return; }
+  if (!confirm("\u786e\u5b9a\u6e05\u7a7a\u5168\u90e8 " + latestTasks.length + " \u4e2a\u4efb\u52a1\uff1f\u6b64\u64cd\u4f5c\u4e0d\u53ef\u64a4\u9500\uff08\u4e0d\u5f71\u54cd\u5e38\u7528\u4efb\u52a1\u5e93\uff09")) return;
+  try {
+    for (const t of [...latestTasks]) { await deleteDoc(doc(db, "tasks", t.id)); }
+    showToast("\ud83e\uddf9 \u5df2\u6e05\u7a7a\u6240\u6709\u4efb\u52a1");
+  } catch(e){ showToast("\u274c \u6e05\u7a7a\u5931\u8d25: " + e.message); }
 };
 
 window.deleteTask = async function(id) {
