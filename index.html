@@ -203,6 +203,7 @@
   .dur-stepper #durValue{font-size:19px; font-weight:800; min-width:38px; text-align:center;}
   .dur-unit{color:var(--text-secondary); font-size:14px;}
   .btn-edit{background:var(--accent-soft); color:var(--accent-text); font-size:16px; padding:6px 10px;}
+  .tpl-group-head{font-size:12px; font-weight:800; color:var(--accent-text); background:var(--accent-soft); padding:6px 12px; border-bottom:1px solid var(--border);}
 </style>
 </head>
 <body>
@@ -598,21 +599,37 @@ function renderTemplates() {
   const box = document.getElementById("tplList");
   const selAll = document.getElementById("tplSelectAll");
   if (templates.length === 0) {
-    box.innerHTML = `<div class="empty"><div class="empty-icon">\u2b50\ufe0f</div>\u8fd8\u6ca1\u6709\u5e38\u7528\u4efb\u52a1\u3002\u5728\u4e0a\u65b9\u586b\u597d\u540e\u70b9\u300c\u2605 \u5b58\u5165\u5e38\u7528\u5e93\u300d</div>`;
+    box.innerHTML = `<div class="empty"><div class="empty-icon">⭐️</div>还没有常用任务。在上方填好后点「★ 存入常用库」</div>`;
     if (selAll) selAll.checked = false;
     return;
   }
-  box.innerHTML = templates.map(t => `
+  const groups = [
+    { key: "english", name: "英语", icon: "📖" },
+    { key: "math",    name: "数学", icon: "📐" },
+    { key: "chinese", name: "语文", icon: "✏️" },
+    { key: "other",   name: "其他", icon: "⭐️" },
+  ];
+  const known = ["english", "math", "chinese", "other"];
+  const bucket = t => known.includes(t.typeRaw) ? t.typeRaw : "other";
+  const rowHtml = t => `
     <div class="tpl-row">
       <input type="checkbox" class="tpl-check" data-id="${t.id}">
-      <div class="task-icon">${t.icon || "\u2b50\ufe0f"}</div>
+      <div class="task-icon">${t.icon || "⭐️"}</div>
       <div class="task-info">
         <div class="task-name">${t.title}</div>
-        <div class="task-meta">\ud83e\ude99 ${t.rewardAmount} \u00b7 \u23f1 ${t.estMinutes || 20}\u5206 \u00b7 ${t.frequencyRaw === "once" ? "\u4e34\u65f6" : "\u6bcf\u5929"}</div>
+        <div class="task-meta">🪙 ${t.rewardAmount} · ⏱ ${t.estMinutes || 20}分 · ${t.frequencyRaw === "once" ? "临时" : "每天"}</div>
       </div>
       <button class="btn btn-edit" onclick="openTplEdit('${t.id}')" title="修改">✏️</button>
-      <button class="btn btn-delete" onclick="deleteTemplate('${t.id}')" title="\u4ece\u5e38\u7528\u5e93\u5220\u9664">\ud83d\uddd1</button>
-    </div>`).join("");
+      <button class="btn btn-delete" onclick="deleteTemplate('${t.id}')" title="从常用库删除">🗑</button>
+    </div>`;
+  let html = "";
+  for (const g of groups) {
+    const items = templates.filter(t => bucket(t) === g.key);
+    if (items.length === 0) continue;
+    html += `<div class="tpl-group-head">${g.icon} ${g.name}（${items.length}）</div>`;
+    html += items.map(rowHtml).join("");
+  }
+  box.innerHTML = html;
   if (selAll) selAll.checked = false;
 }
 
