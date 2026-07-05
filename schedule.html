@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Susie排班">
+<title>Susie 的一天 · 排班表</title>
+<style>
+  :root{
+    --bg:#fdf6e3; --card:#fffdf5; --header-bg:#fffaee; --border:#f0e5cc;
+    --text:#5c4a2a; --text-secondary:#8b7355; --text-muted:#b8a37a;
+    --input-bg:#fffaee; --input-soft:#f7eed8;
+    --accent:#d97706; --accent-soft:#fef3c7; --accent-text:#92400e;
+    --success:#65a30d; --success-soft:#ecfccb; --success-text:#3f6212;
+    --danger:#dc2626; --danger-soft:#fee2e2;
+    --eng:#2563eb; --math:#7c3aed; --chin:#db2777; --other:#0891b2; --routine:#6b7280;
+    --row-h:46px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif;
+    background:var(--bg); color:var(--text); font-size:15px; line-height:1.4;
+    -webkit-user-select:none; user-select:none;
+  }
+  .toolbar{
+    position:sticky; top:0; z-index:30; background:var(--header-bg);
+    border-bottom:1px solid var(--border); padding:10px 16px;
+    display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  }
+  .toolbar h1{font-size:18px; font-weight:800; margin:0; color:var(--accent-text);}
+  .toolbar .spacer{flex:1;}
+  .toolbar input[type=date]{
+    font-size:15px; padding:6px 10px; border:1px solid var(--border);
+    border-radius:10px; background:var(--input-bg); color:var(--text);
+  }
+  .btn{
+    font-size:14px; font-weight:600; padding:8px 14px; border:none; border-radius:10px;
+    cursor:pointer; background:var(--accent); color:#fff;
+  }
+  .btn.ghost{background:var(--input-soft); color:var(--text-secondary);}
+  .btn.small{padding:5px 10px; font-size:13px;}
+  .status{font-size:12px; color:var(--text-muted);}
+
+  .layout{display:flex; gap:14px; padding:14px; align-items:flex-start;}
+  /* ===== 左：时间轴 ===== */
+  .timeline-wrap{flex:1 1 60%; min-width:0;}
+  .sheet{
+    background:var(--card); border:1px solid var(--border); border-radius:16px;
+    padding:14px 14px 20px;
+  }
+  .sheet-head{display:flex; align-items:baseline; gap:10px; margin-bottom:10px;}
+  .sheet-head .title{font-size:17px; font-weight:800;}
+  .sheet-head .sub{font-size:13px; color:var(--text-muted);}
+  .grid{position:relative;}
+  .rows{position:relative;}
+  .row{
+    position:relative; height:var(--row-h); border-top:1px dashed var(--border);
+    display:flex;
+  }
+  .row:last-child{border-bottom:1px dashed var(--border);}
+  .row.hour{border-top:1px solid var(--border);}
+  .row .tlabel{
+    width:52px; flex:0 0 52px; font-size:12px; color:var(--text-muted);
+    padding:2px 6px 0 0; text-align:right; font-variant-numeric:tabular-nums;
+  }
+  .row.half .tlabel{color:transparent;}
+  .lane{position:absolute; left:52px; right:6px; top:0; bottom:0;}
+  .row.drop-hover .lane{background:var(--accent-soft);}
+  /* placed blocks live in an overlay so they can span rows */
+  .blocks{position:absolute; left:52px; right:6px; top:0;}
+  .block{
+    position:absolute; border-radius:10px; padding:6px 8px; overflow:hidden;
+    color:#fff; box-shadow:0 1px 3px rgba(0,0,0,.15); cursor:grab;
+    display:flex; flex-direction:column; justify-content:flex-start; gap:2px;
+    border:2px solid rgba(255,255,255,.35);
+  }
+  .block.dragging{opacity:.5;}
+  .block.done{opacity:.8;}
+  .block .b-top{display:flex; align-items:center; gap:6px;}
+  .block .b-title{font-weight:700; font-size:14px; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .block.done .b-title{text-decoration:line-through;}
+  .block .b-time{font-size:11px; opacity:.9; font-variant-numeric:tabular-nums;}
+  .block .b-chk{
+    width:22px; height:22px; flex:0 0 22px; border-radius:6px; background:rgba(255,255,255,.9);
+    color:var(--success-text); display:flex; align-items:center; justify-content:center;
+    font-weight:900; font-size:15px; cursor:pointer;
+  }
+  .block .b-rm{
+    width:20px; height:20px; flex:0 0 20px; border-radius:6px; background:rgba(0,0,0,.18);
+    color:#fff; display:flex; align-items:center; justify-content:center; font-size:13px; cursor:pointer;
+  }
+  .t-eng{background:var(--eng);} .t-math{background:var(--math);}
+  .t-chin{background:var(--chin);} .t-other{background:var(--other);}
+  .t-routine{background:var(--routine);}
+
+  /* ===== 右：任务库 ===== */
+  .sidebar{flex:0 0 320px; max-width:320px;}
+  @media(max-width:820px){ .layout{flex-direction:column;} .sidebar{flex:1 1 auto; max-width:none; width:100%;} }
+  .panel{background:var(--card); border:1px solid var(--border); border-radius:16px; padding:12px; margin-bottom:12px;}
+  .panel h2{font-size:13px; text-transform:uppercase; letter-spacing:.5px; color:var(--text-secondary); margin:0 0 10px; font-weight:700;}
+  .hint{font-size:12px; color:var(--text-muted); margin:-4px 0 10px;}
+  .cards{display:flex; flex-direction:column; gap:8px;}
+  .card{
+    background:var(--input-bg); border:1px solid var(--border); border-radius:12px;
+    padding:9px 10px; display:flex; align-items:center; gap:8px; cursor:grab; touch-action:none;
+  }
+  .card .dur{touch-action:auto;}
+  .chip,.block{touch-action:none;}
+  .card.placed{opacity:.45;}
+  .card .ic{font-size:18px; flex:0 0 auto;}
+  .card .c-main{flex:1; min-width:0;}
+  .card .c-title{font-weight:700; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .card .c-meta{font-size:11px; color:var(--text-muted);}
+  .card .dur{
+    display:flex; align-items:center; gap:2px; background:var(--input-soft); border-radius:8px; padding:2px 4px;
+  }
+  .card .dur button{width:20px; height:20px; border:none; border-radius:6px; background:var(--card); color:var(--accent); font-weight:800; cursor:pointer; font-size:14px;}
+  .card .dur input{width:30px; border:none; background:transparent; text-align:center; font-size:13px; color:var(--text); font-weight:700; -moz-appearance:textfield;}
+  .card .dur input::-webkit-outer-spin-button,.card .dur input::-webkit-inner-spin-button{-webkit-appearance:none;}
+  .card .dur .u{font-size:11px; color:var(--text-muted);}
+  .preset-chips{display:flex; flex-wrap:wrap; gap:6px;}
+  .chip{background:var(--input-soft); border:1px dashed var(--border); border-radius:20px; padding:5px 10px; font-size:13px; cursor:grab; color:var(--text-secondary);}
+  .addrow{display:flex; gap:6px; margin-top:8px;}
+  .addrow input[type=text]{flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:10px; background:var(--input-bg); color:var(--text); font-size:14px;}
+
+  /* floating drag ghost */
+  #ghost{position:fixed; z-index:1000; pointer-events:none; opacity:.92; transform:translate(-50%,-50%);
+    padding:6px 12px; border-radius:10px; color:#fff; font-weight:700; font-size:14px; box-shadow:0 4px 14px rgba(0,0,0,.25); display:none;}
+  #toast{position:fixed; left:50%; bottom:28px; transform:translateX(-50%); background:rgba(0,0,0,.82); color:#fff;
+    padding:10px 18px; border-radius:22px; font-size:14px; opacity:0; transition:opacity .25s; z-index:2000; pointer-events:none;}
+  #toast.show{opacity:1;}
+
+  /* ===== 打印 ===== */
+  @media print{
+    @page{size:A4 portrait; margin:12mm;}
+    body{background:#fff; -webkit-print-color-adjust:exact; print-color-adjust:exact;}
+    .toolbar,.sidebar,.no-print{display:none !important;}
+    .layout{padding:0; display:block;}
+    .timeline-wrap{width:100%;}
+    .sheet{border:none; padding:0;}
+    .block{box-shadow:none; color:#000 !important; background:#fff !important; border:1.5px solid #999 !important;}
+    .block .b-title{color:#000;}
+    .block .b-time{color:#333; opacity:1;}
+    .block .b-rm{display:none;}
+    .block .b-chk{background:#fff; border:1.5px solid #444; color:#000;}
+    .row{height:var(--row-h);}
+    .print-head{display:flex !important;}
+  }
+  .print-head{display:none; justify-content:space-between; align-items:baseline; margin-bottom:8px;}
+  .print-head .pt{font-size:20px; font-weight:800;}
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <h1>🗓️ Susie 的一天</h1>
+  <input type="date" id="datePicker">
+  <span class="spacer"></span>
+  <button class="btn ghost small" id="clearBtn">清空排班</button>
+  <button class="btn small" id="printBtn">🖨️ 打印</button>
+  <span class="status" id="statusText">连接中…</span>
+</div>
+
+<div class="layout">
+  <!-- 左：时间轴 -->
+  <div class="timeline-wrap">
+    <div class="sheet">
+      <div class="print-head">
+        <span class="pt">Susie 的一天</span>
+        <span class="pt" id="printDate"></span>
+      </div>
+      <div class="sheet-head no-print">
+        <span class="title">时间轴</span>
+        <span class="sub">把右边任务拖到对应时间 · 按住已排任务可移动</span>
+      </div>
+      <div class="grid">
+        <div class="rows" id="rows"></div>
+        <div class="blocks" id="blocks"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 右：任务库 -->
+  <div class="sidebar">
+    <div class="panel">
+      <h2>今日任务（来自家长面板）</h2>
+      <div class="hint">家长在网页端加的任务会自动出现在这里，拖到左边即可排班。数字是预估分钟，可点 −／＋ 调整。</div>
+      <div class="cards" id="taskCards"></div>
+      <div class="hint" id="noTasks" style="display:none;">暂无任务。让爸爸/妈妈在家长面板添加今天的任务～</div>
+    </div>
+    <div class="panel">
+      <h2>生活作息（拖着用）</h2>
+      <div class="hint">吃饭、休息、运动这些不发金币的日常，直接拖进去。</div>
+      <div class="preset-chips" id="presetChips"></div>
+      <div class="addrow">
+        <input type="text" id="customTitle" placeholder="自定义一项，如：游泳 45 分钟">
+        <button class="btn small" id="addCustom">加入</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="ghost"></div>
+<div id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, onSnapshot, query }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey:"AIzaSyDy4yJAz6qegHHO9mLERtPr3CN2eVuNQoE",
+  authDomain:"todolist-1cee1.firebaseapp.com",
+  projectId:"todolist-1cee1",
+  storageBucket:"todolist-1cee1.firebasestorage.app",
+  messagingSenderId:"940068669351",
+  appId:"1:940068669351:web:e314368fe7a416518a9882",
+  measurementId:"G-NS4DBV09GL"
+};
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+// ===== 配置 =====
+const START_MIN = 7*60;      // 07:00
+const END_MIN   = 21*60;     // 21:00
+const SLOT      = 30;        // 每格 30 分钟
+const N_SLOTS   = (END_MIN-START_MIN)/SLOT;
+const ROW_H     = 46;        // 与 CSS --row-h 一致
+const typeDur   = { english:20, math:20, chinese:15, other:15 };
+const typeIcon  = { english:"📖", math:"📐", chinese:"✏️", other:"⭐️" };
+const typeClass = { english:"t-eng", math:"t-math", chinese:"t-chin", other:"t-other" };
+const PRESETS = [
+  {title:"起床洗漱", dur:30}, {title:"早餐", dur:30}, {title:"午餐", dur:45},
+  {title:"午休", dur:60}, {title:"晚餐", dur:45}, {title:"阅读", dur:30},
+  {title:"运动", dur:30}, {title:"钢琴", dur:30}, {title:"自由玩耍", dur:30}, {title:"休息", dur:15},
+];
+
+// ===== 状态 =====
+let firestoreTasks = [];     // 来自 Firebase 的任务
+let curDate = todayStr();
+let blocks = [];             // 当天排班 [{id,title,typeRaw,dur,start(min),done,src,taskId}]
+let durOverride = loadJSON("sched_durOverride", {}); // taskId -> minutes
+
+function todayStr(d=new Date()){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function loadJSON(k,def){ try{return JSON.parse(localStorage.getItem(k))??def;}catch(e){return def;} }
+function saveJSON(k,v){ localStorage.setItem(k, JSON.stringify(v)); }
+function blkKey(date){ return "sched_blocks_"+date; }
+function loadBlocks(date){ blocks = loadJSON(blkKey(date), []); }
+function saveBlocks(){ saveJSON(blkKey(curDate), blocks); }
+function minToStr(m){ return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"); }
+function uid(){ return "b"+Date.now()+Math.random().toString(36).slice(2,6); }
+
+// ===== 渲染时间轴网格 =====
+function buildRows(){
+  const rows = document.getElementById("rows");
+  rows.style.setProperty("--row-h", ROW_H+"px");
+  document.documentElement.style.setProperty("--row-h", ROW_H+"px");
+  let html="";
+  for(let i=0;i<N_SLOTS;i++){
+    const m = START_MIN + i*SLOT;
+    const isHour = (m%60===0);
+    html += `<div class="row ${isHour?'hour':'half'}" data-slot="${i}">
+      <div class="tlabel">${isHour?minToStr(m):minToStr(m)}</div>
+      <div class="lane"></div></div>`;
+  }
+  rows.innerHTML = html;
+}
+
+// ===== 渲染任务库 =====
+function renderLibrary(){
+  const wrap = document.getElementById("taskCards");
+  const placedTaskIds = new Set(blocks.filter(b=>b.taskId).map(b=>b.taskId));
+  const list = firestoreTasks.filter(t => t.statusRaw!=="rejected");
+  document.getElementById("noTasks").style.display = list.length? "none":"block";
+  wrap.innerHTML = list.map(t=>{
+    const dur = durOverride[t.id] ?? typeDur[t.typeRaw] ?? 20;
+    const placed = placedTaskIds.has(t.id);
+    const freq = t.frequencyRaw==="once" ? "临时" : "每天";
+    return `<div class="card ${placed?'placed':''}" data-kind="task" data-id="${t.id}">
+      <span class="ic">${t.icon||typeIcon[t.typeRaw]||"⭐️"}</span>
+      <div class="c-main">
+        <div class="c-title">${esc(t.title)}</div>
+        <div class="c-meta">${freq}${t.rewardAmount?` · 🪙${t.rewardAmount}`:""}</div>
+      </div>
+      <div class="dur" data-noDrag="1">
+        <button data-d="-1">−</button>
+        <input type="number" value="${dur}" min="5" step="5" data-id="${t.id}">
+        <span class="u">分</span>
+        <button data-d="1">＋</button>
+      </div>
+    </div>`;
+  }).join("");
+  // presets
+  document.getElementById("presetChips").innerHTML = PRESETS.map(p=>
+    `<div class="chip" data-kind="preset" data-title="${esc(p.title)}" data-dur="${p.dur}">${esc(p.title)} · ${p.dur}分</div>`
+  ).join("");
+}
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+// ===== 渲染排班块（含重叠分列）=====
+function renderBlocks(){
+  const host = document.getElementById("blocks");
+  // 计算重叠分列
+  const sorted = [...blocks].sort((a,b)=>a.start-b.start);
+  const cols=[]; // 每列的结束时间
+  sorted.forEach(b=>{
+    let placed=false;
+    for(let i=0;i<cols.length;i++){ if(cols[i]<=b.start){ b._col=i; cols[i]=b.start+b.dur; placed=true; break; } }
+    if(!placed){ b._col=cols.length; cols.push(b.start+b.dur); }
+  });
+  const ncols = Math.max(1, cols.length);
+  host.style.height = (N_SLOTS*ROW_H)+"px";
+  host.innerHTML = sorted.map(b=>{
+    const top = ((b.start-START_MIN)/SLOT)*ROW_H;
+    const h = Math.max(ROW_H*(b.dur/SLOT)-4, 30);
+    const w = 100/ncols;
+    const cls = b.src==="preset" ? "t-routine" : (typeClass[b.typeRaw]||"t-other");
+    return `<div class="block ${cls} ${b.done?'done':''}" data-id="${b.id}"
+      style="top:${top}px; height:${h}px; left:${b._col*w}%; width:calc(${w}% - 4px);">
+      <div class="b-top">
+        <div class="b-chk" data-act="done">${b.done?"✓":""}</div>
+        <div class="b-title">${esc(b.title)}</div>
+        <div class="b-rm no-print" data-act="rm">✕</div>
+      </div>
+      <div class="b-time">${minToStr(b.start)}–${minToStr(b.start+b.dur)} · ${b.dur}分</div>
+    </div>`;
+  }).join("");
+}
+
+function renderAll(){ renderBlocks(); renderLibrary(); }
+
+// ===== 拖拽引擎（Pointer Events，兼容触屏）=====
+const ghost = document.getElementById("ghost");
+let drag = null; // {kind, payload, movingId}
+
+function startDrag(e, info){
+  drag = info;
+  ghost.textContent = info.label;
+  ghost.style.background = info.color;
+  ghost.style.display = "block";
+  moveGhost(e);
+  document.addEventListener("pointermove", onMove, {passive:false});
+  document.addEventListener("pointerup", onUp, {once:true});
+}
+function moveGhost(e){ ghost.style.left=e.clientX+"px"; ghost.style.top=e.clientY+"px"; }
+function slotFromPoint(e){
+  const rows = document.getElementById("rows");
+  const r = rows.getBoundingClientRect();
+  if(e.clientX < r.left-40 || e.clientX > r.right+40) return -1;
+  const y = e.clientY - r.top;
+  if(y<0 || y>r.height+ROW_H) return -1;
+  let idx = Math.floor(y/ROW_H);
+  return Math.max(0, Math.min(N_SLOTS-1, idx));
+}
+function onMove(e){
+  e.preventDefault();
+  moveGhost(e);
+  const idx = slotFromPoint(e);
+  document.querySelectorAll(".row.drop-hover").forEach(el=>el.classList.remove("drop-hover"));
+  if(idx>=0){ const row=document.querySelector(`.row[data-slot="${idx}"]`); if(row) row.classList.add("drop-hover"); }
+}
+function onUp(e){
+  document.removeEventListener("pointermove", onMove);
+  ghost.style.display="none";
+  document.querySelectorAll(".row.drop-hover").forEach(el=>el.classList.remove("drop-hover"));
+  const idx = slotFromPoint(e);
+  if(drag && idx>=0){
+    const start = START_MIN + idx*SLOT;
+    if(drag.movingId){
+      const b = blocks.find(x=>x.id===drag.movingId); if(b){ b.start=start; }
+    } else {
+      const p = drag.payload;
+      blocks.push({ id:uid(), title:p.title, typeRaw:p.typeRaw, dur:p.dur, start, done:false, src:p.src, taskId:p.taskId||null });
+    }
+    saveBlocks(); renderAll();
+  }
+  drag=null;
+}
+
+// ===== 事件绑定 =====
+// 任务库卡片 / preset chip → 拖拽
+document.addEventListener("pointerdown", (e)=>{
+  const durEl = e.target.closest('[data-noDrag]');
+  const card = e.target.closest('.card[data-kind="task"]');
+  const chip = e.target.closest('.chip[data-kind="preset"]');
+  const block = e.target.closest('.block');
+  const act = e.target.closest('[data-act]');
+
+  // 卡片时长 −/＋ 按钮
+  if(durEl){
+    const btn = e.target.closest('button[data-d]');
+    if(btn){
+      const inp = durEl.querySelector('input'); const id=inp.dataset.id;
+      let v = (parseInt(inp.value)||20) + (parseInt(btn.dataset.d)*5);
+      v = Math.max(5, v); inp.value=v; durOverride[id]=v; saveJSON("sched_durOverride",durOverride);
+    }
+    return; // 不触发拖拽
+  }
+  // 块上的打勾 / 删除
+  if(block && act){
+    const b = blocks.find(x=>x.id===block.dataset.id);
+    if(b){
+      if(act.dataset.act==="done"){ b.done=!b.done; }
+      if(act.dataset.act==="rm"){ blocks = blocks.filter(x=>x.id!==b.id); }
+      saveBlocks(); renderAll();
+    }
+    return;
+  }
+  // 拖动已排块（移动）
+  if(block){
+    const b = blocks.find(x=>x.id===block.dataset.id); if(!b) return;
+    block.classList.add("dragging");
+    startDrag(e, { movingId:b.id, label:b.title, color:getComputedStyle(block).backgroundColor });
+    return;
+  }
+  // 拖任务卡
+  if(card){
+    const t = firestoreTasks.find(x=>x.id===card.dataset.id); if(!t) return;
+    const dur = durOverride[t.id] ?? typeDur[t.typeRaw] ?? 20;
+    const colorMap = {english:"#2563eb",math:"#7c3aed",chinese:"#db2777",other:"#0891b2"};
+    startDrag(e, { payload:{title:t.title,typeRaw:t.typeRaw,dur,src:"task",taskId:t.id}, label:t.title, color:colorMap[t.typeRaw]||"#0891b2" });
+    return;
+  }
+  if(chip){
+    startDrag(e, { payload:{title:chip.dataset.title,typeRaw:"other",dur:parseInt(chip.dataset.dur),src:"preset"}, label:chip.dataset.title, color:"#6b7280" });
+    return;
+  }
+}, {passive:true});
+
+// 时长输入框手动改
+document.addEventListener("change",(e)=>{
+  if(e.target.matches('.dur input')){
+    const id=e.target.dataset.id; let v=Math.max(5,parseInt(e.target.value)||20);
+    e.target.value=v; durOverride[id]=v; saveJSON("sched_durOverride",durOverride);
+  }
+});
+
+// 自定义任务加入库（直接排到第一空位不好判断，做成拖拽 chip 追加）
+document.getElementById("addCustom").addEventListener("click",()=>{
+  const inp=document.getElementById("customTitle"); const raw=inp.value.trim(); if(!raw) return;
+  const m = raw.match(/(\d+)\s*分?/); const dur = m?Math.max(5,parseInt(m[1])):30;
+  const title = raw.replace(/(\d+)\s*分钟?/,"").trim() || raw;
+  PRESETS.push({title, dur}); inp.value=""; renderLibrary(); toast("已加入作息库，拖进去用");
+});
+
+// 日期切换
+const dp=document.getElementById("datePicker");
+dp.value=curDate;
+dp.addEventListener("change",()=>{ curDate=dp.value||todayStr(); loadBlocks(curDate); document.getElementById("printDate").textContent=curDate; renderAll(); });
+
+document.getElementById("clearBtn").addEventListener("click",()=>{
+  if(!confirm("清空当天的排班？")) return; blocks=[]; saveBlocks(); renderAll();
+});
+document.getElementById("printBtn").addEventListener("click",()=>window.print());
+
+// ===== Firebase 监听 =====
+try{
+  onSnapshot(query(collection(db,"tasks")), (snap)=>{
+    firestoreTasks = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    // 排序：daily 在前，按 sortOrder
+    firestoreTasks.sort((a,b)=>(a.sortOrder||0)-(b.sortOrder||0));
+    document.getElementById("statusText").textContent="已连接 ✓ "+firestoreTasks.length+" 个任务";
+    renderAll();
+  }, (err)=>{ document.getElementById("statusText").textContent="连接失败："+err.code; });
+}catch(e){ document.getElementById("statusText").textContent="连接异常"; }
+
+function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),2200); }
+
+// ===== 初始化 =====
+buildRows();
+loadBlocks(curDate);
+document.getElementById("printDate").textContent=curDate;
+renderAll();
+</script>
+</body>
+</html>
