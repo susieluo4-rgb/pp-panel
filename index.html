@@ -171,6 +171,18 @@
   .preview-dark  { background: linear-gradient(135deg, #1c1c1e 0%, #2c2c2e 100%); color: #0a84ff; border: 1px solid #38383a; }
   .meta-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-secondary); padding: 6px 0; }
   .meta-row .v { color: var(--text); font-weight: 500; }
+
+  /* ===== 常用任务库 ===== */
+  .add-actions{display:flex; gap:8px;}
+  .add-actions .submit-btn{flex:1;}
+  .ghost-btn{background:var(--accent-soft) !important; color:var(--accent-text) !important;}
+  .tpl-row{display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid var(--border);}
+  .tpl-row:last-child{border-bottom:none;}
+  .tpl-row input[type=checkbox]{width:22px; height:22px; flex:0 0 auto; accent-color:var(--accent);}
+  .tpl-bar{display:flex; align-items:center; gap:12px; margin-top:10px; padding:0 4px;}
+  .tpl-bar .submit-btn{flex:1; margin:0;}
+  .tpl-selall{display:flex; align-items:center; gap:6px; font-size:14px; color:var(--text-secondary); white-space:nowrap; cursor:pointer;}
+  .tpl-selall input{width:18px; height:18px; accent-color:var(--accent);}
 </style>
 </head>
 <body>
@@ -214,7 +226,20 @@
       <div class="btn-chip btn-chip-coin" data-val="10">10</div>
     </div>
 
-    <button class="submit-btn" id="addBtn" onclick="addTask()">＋ 添加任务</button>
+    <div class="add-actions">
+      <button class="submit-btn" id="addBtn" onclick="addTask()">＋ 添加到今天</button>
+      <button class="submit-btn ghost-btn" id="tplBtn" onclick="saveTemplate()">★ 存入常用库</button>
+    </div>
+  </div>
+</div>
+
+<!-- 常用任务库 -->
+<div class="section">
+  <div class="section-title">常用任务库 · 勾选后一键导入今天</div>
+  <div class="card" id="tplList"><div class="loading">加载中…</div></div>
+  <div class="tpl-bar">
+    <label class="tpl-selall"><input type="checkbox" id="tplSelectAll" onclick="toggleAllTpl(this)"> 全选</label>
+    <button class="submit-btn" id="importBtn" onclick="importSelected()">⬇️ 导入选中到今天</button>
   </div>
 </div>
 
@@ -441,6 +466,88 @@ window.deleteTask = async function(id) {
   if (!confirm("确认删除这个任务？")) return;
   await deleteDoc(doc(db, "tasks", id));
   showToast("🗑 已删除");
+};
+
+// ===== 常用任务库 =====
+let templates = [];
+
+window.saveTemplate = async function() {
+  const title = document.getElementById("newTitle").value.trim();
+  if (!title) { showToast("先填任务名称"); return; }
+  const typeVal = getGroupVal("typeGroup");
+  const coinVal = parseInt(getGroupVal("coinGroup")) || 3;
+  const icon = typeIconMap[typeVal] || "\u2b50\ufe0f";
+  const btn = document.getElementById("tplBtn"); btn.disabled = true;
+  try {
+    await addDoc(collection(db, "templates"), {
+      title, icon, typeRaw: typeVal, rewardAmount: coinVal,
+      sortOrder: Date.now(), createdAt: Date.now()/1000,
+    });
+    document.getElementById("newTitle").value = "";
+    showToast("\u2605 \u5df2\u5b58\u5165\u5e38\u7528\u5e93");
+  } catch(e){ showToast("\u274c \u5b58\u5165\u5931\u8d25: " + e.message); }
+  btn.disabled = false;
+};
+
+const tplQ = query(collection(db, "templates"), orderBy("sortOrder"));
+onSnapshot(tplQ, snap => {
+  templates = []; snap.forEach(d => templates.push({ id:d.id, ...d.data() }));
+  renderTemplates();
+}, err => {});
+
+function renderTemplates() {
+  const box = document.getElementById("tplList");
+  const selAll = document.getElementById("tplSelectAll");
+  if (templates.length === 0) {
+    box.innerHTML = `<div class="empty"><div class="empty-icon">\u2b50\ufe0f</div>\u8fd8\u6ca1\u6709\u5e38\u7528\u4efb\u52a1\u3002\u5728\u4e0a\u65b9\u586b\u597d\u540e\u70b9\u300c\u2605 \u5b58\u5165\u5e38\u7528\u5e93\u300d</div>`;
+    if (selAll) selAll.checked = false;
+    return;
+  }
+  box.innerHTML = templates.map(t => `
+    <div class="tpl-row">
+      <input type="checkbox" class="tpl-check" data-id="${t.id}">
+      <div class="task-icon">${t.icon || "\u2b50\ufe0f"}</div>
+      <div class="task-info">
+        <div class="task-name">${t.title}</div>
+        <div class="task-meta">\ud83e\ude99 ${t.rewardAmount}</div>
+      </div>
+      <button class="btn btn-delete" onclick="deleteTemplate('${t.id}')" title="\u4ece\u5e38\u7528\u5e93\u5220\u9664">\ud83d\uddd1</button>
+    </div>`).join("");
+  if (selAll) selAll.checked = false;
+}
+
+window.toggleAllTpl = function(box) {
+  document.querySelectorAll(".tpl-check").forEach(c => c.checked = box.checked);
+};
+
+window.deleteTemplate = async function(id) {
+  if (!confirm("\u4ece\u5e38\u7528\u5e93\u5220\u9664\u8fd9\u6761\uff1f\uff08\u4e0d\u5f71\u54cd\u4eca\u5929\u5df2\u5bfc\u5165\u7684\u4efb\u52a1\uff09")) return;
+  await deleteDoc(doc(db, "templates", id));
+  showToast("\ud83d\uddd1 \u5df2\u4ece\u5e38\u7528\u5e93\u5220\u9664");
+};
+
+window.importSelected = async function() {
+  const checked = [...document.querySelectorAll(".tpl-check:checked")].map(c => c.dataset.id);
+  if (checked.length === 0) { showToast("\u5148\u52fe\u9009\u8981\u5bfc\u5165\u7684\u4efb\u52a1"); return; }
+  const btn = document.getElementById("importBtn"); btn.disabled = true;
+  let n = 0;
+  try {
+    for (const id of checked) {
+      const t = templates.find(x => x.id === id); if (!t) continue;
+      await addDoc(collection(db, "tasks"), {
+        title: t.title, icon: t.icon || "\u2b50\ufe0f", taskDescription: "",
+        typeRaw: t.typeRaw || "other", frequencyRaw: "once",
+        rewardAmount: t.rewardAmount || 3, statusRaw: "active",
+        completedDate: "", rejectionReason: "",
+        sortOrder: Date.now() + n, createdAt: Date.now()/1000,
+      });
+      n++;
+    }
+    document.querySelectorAll(".tpl-check").forEach(c => c.checked = false);
+    const selAll = document.getElementById("tplSelectAll"); if (selAll) selAll.checked = false;
+    showToast("\u2b07\ufe0f \u5df2\u5bfc\u5165 " + n + " \u4e2a\u4efb\u52a1\u5230\u4eca\u5929");
+  } catch(e){ showToast("\u274c \u5bfc\u5165\u5931\u8d25: " + e.message); }
+  btn.disabled = false;
 };
 
 function showToast(msg) {
