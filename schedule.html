@@ -274,7 +274,7 @@ function renderLibrary(){
   const list = firestoreTasks.filter(t => t.statusRaw!=="rejected");
   document.getElementById("noTasks").style.display = list.length? "none":"block";
   wrap.innerHTML = list.map(t=>{
-    const dur = durOverride[t.id] ?? typeDur[t.typeRaw] ?? 20;
+    const dur = durOverride[t.id] ?? t.estMinutes ?? typeDur[t.typeRaw] ?? 20;
     const placed = placedTaskIds.has(t.id);
     const freq = t.frequencyRaw==="once" ? "临时" : "每天";
     return `<div class="card ${placed?'placed':''}" data-kind="task" data-id="${t.id}">
@@ -417,7 +417,7 @@ document.addEventListener("pointerdown", (e)=>{
   // 拖任务卡
   if(card){
     const t = firestoreTasks.find(x=>x.id===card.dataset.id); if(!t) return;
-    const dur = durOverride[t.id] ?? typeDur[t.typeRaw] ?? 20;
+    const dur = durOverride[t.id] ?? t.estMinutes ?? typeDur[t.typeRaw] ?? 20;
     const colorMap = {english:"#2563eb",math:"#7c3aed",chinese:"#db2777",other:"#0891b2"};
     startDrag(e, { payload:{title:t.title,typeRaw:t.typeRaw,dur,src:"task",taskId:t.id}, label:t.title, color:colorMap[t.typeRaw]||"#0891b2" });
     return;

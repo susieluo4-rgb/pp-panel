@@ -243,6 +243,16 @@
       <div class="btn-chip btn-chip-coin" data-val="10">10</div>
     </div>
 
+    <label>预计时长</label>
+    <div class="btn-group" id="durGroup">
+      <div class="btn-chip" data-val="10">10分</div>
+      <div class="btn-chip" data-val="15">15分</div>
+      <div class="btn-chip selected" data-val="20">20分</div>
+      <div class="btn-chip" data-val="30">30分</div>
+      <div class="btn-chip" data-val="45">45分</div>
+      <div class="btn-chip" data-val="60">60分</div>
+    </div>
+
     <div class="add-actions">
       <button class="submit-btn" id="addBtn" onclick="addTask()">＋ 添加到今天</button>
       <button class="submit-btn ghost-btn" id="tplBtn" onclick="saveTemplate()">★ 存入常用库</button>
@@ -391,6 +401,7 @@ function getGroupVal(groupId) {
 setupBtnGroup("typeGroup");
 setupBtnGroup("freqGroup");
 setupBtnGroup("coinGroup");
+setupBtnGroup("durGroup");
 
 // ===== 实时监听任务 =====
 let latestTasks = [];
@@ -441,7 +452,7 @@ function renderTasks(tasks) {
         <div class="task-icon">${t.icon || "⭐️"}</div>
         <div class="task-info">
           <div class="task-name">${t.title}</div>
-          <div class="task-meta">🪙 ${t.rewardAmount} · ${t.frequencyRaw === "daily" ? "每天" : t.frequencyRaw === "once" ? "临时" : "每周"}</div>
+          <div class="task-meta">🪙 ${t.rewardAmount} · ⏱ ${t.estMinutes || 20}分 · ${t.frequencyRaw === "daily" ? "每天" : t.frequencyRaw === "once" ? "临时" : "每周"}</div>
         </div>
         <span class="status-badge badge-${cls}">${label}</span>
         <button class="btn btn-delete" onclick="deleteTask('${t.id}')" title="删除">🗑</button>
@@ -455,6 +466,7 @@ window.addTask = async function() {
   const typeVal = getGroupVal("typeGroup");
   const freqVal = getGroupVal("freqGroup");
   const coinVal = parseInt(getGroupVal("coinGroup")) || 3;
+  const durVal = parseInt(getGroupVal("durGroup")) || 20;
   const icon = typeIconMap[typeVal] || "⭐️";
   const btn = document.getElementById("addBtn");
   btn.disabled = true;
@@ -466,6 +478,7 @@ window.addTask = async function() {
       typeRaw:         typeVal,
       frequencyRaw:    freqVal === "once" ? "once" : "daily",
       rewardAmount:    coinVal,
+      estMinutes:      durVal,
       statusRaw:       "active",
       completedDate:   "",
       rejectionReason: "",
@@ -513,11 +526,12 @@ window.saveTemplate = async function() {
   if (!title) { showToast("先填任务名称"); return; }
   const typeVal = getGroupVal("typeGroup");
   const coinVal = parseInt(getGroupVal("coinGroup")) || 3;
+  const durVal = parseInt(getGroupVal("durGroup")) || 20;
   const icon = typeIconMap[typeVal] || "\u2b50\ufe0f";
   const btn = document.getElementById("tplBtn"); btn.disabled = true;
   try {
     await addDoc(collection(db, "templates"), {
-      title, icon, typeRaw: typeVal, rewardAmount: coinVal,
+      title, icon, typeRaw: typeVal, rewardAmount: coinVal, estMinutes: durVal,
       sortOrder: Date.now(), createdAt: Date.now()/1000,
     });
     document.getElementById("newTitle").value = "";
@@ -546,7 +560,7 @@ function renderTemplates() {
       <div class="task-icon">${t.icon || "\u2b50\ufe0f"}</div>
       <div class="task-info">
         <div class="task-name">${t.title}</div>
-        <div class="task-meta">\ud83e\ude99 ${t.rewardAmount}</div>
+        <div class="task-meta">\ud83e\ude99 ${t.rewardAmount} \u00b7 \u23f1 ${t.estMinutes || 20}\u5206</div>
       </div>
       <button class="btn btn-delete" onclick="deleteTemplate('${t.id}')" title="\u4ece\u5e38\u7528\u5e93\u5220\u9664">\ud83d\uddd1</button>
     </div>`).join("");
@@ -574,7 +588,7 @@ window.importSelected = async function() {
       await addDoc(collection(db, "tasks"), {
         title: t.title, icon: t.icon || "\u2b50\ufe0f", taskDescription: "",
         typeRaw: t.typeRaw || "other", frequencyRaw: "once",
-        rewardAmount: t.rewardAmount || 3, statusRaw: "active",
+        rewardAmount: t.rewardAmount || 3, estMinutes: t.estMinutes || 20, statusRaw: "active",
         completedDate: "", rejectionReason: "",
         sortOrder: Date.now() + n, createdAt: Date.now()/1000,
       });
